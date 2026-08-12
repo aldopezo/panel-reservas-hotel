@@ -1,0 +1,526 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de Reservas</title>
+<style>
+  :root{
+    --ink:#1a2432; --muted:#6b7480; --line:#e4e7ec; --bg:#f5f6f8; --surface:#ffffff;
+    --navy:#16324f; --navy2:#20486e;
+    --cli:#e0891f; --boo:#2f7fd6; --age:#d24743; --disp-bg:#e9f4dd; --disp-tx:#2f6b12;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--bg); font-size:14px; line-height:1.5; font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 16px 48px}
+
+  .gate{position:fixed; inset:0; background:#16324f; display:none; align-items:center; justify-content:center; padding:20px; z-index:100}
+  .gate.on{display:flex}
+  .gatebox{background:#fff; border-radius:14px; padding:26px 26px 22px; max-width:380px; width:100%; text-align:center}
+  .gatebox h2{margin:0 0 4px; font-size:19px}
+  .gatebox p{margin:0 0 18px; color:var(--muted); font-size:13px}
+  .userlist{display:flex; flex-direction:column; gap:8px; margin-bottom:6px}
+  .upick{width:100%; padding:13px 14px; border:1px solid var(--line); border-radius:10px; background:#fff; font:inherit; font-size:15px; cursor:pointer; text-align:left}
+  .upick:hover{border-color:var(--navy2); background:#f3f7fb}
+  .gatebox input{width:100%; padding:11px; border:1px solid var(--line); border-radius:10px; font:inherit; font-size:15px; text-align:center; margin-bottom:8px}
+  .gatebox input:focus{outline:none; border-color:var(--navy2)}
+  .gerr{display:none; color:var(--age); font-size:12px; margin-bottom:8px}
+  .cancelbtn{width:100%; background:none; border:1px solid var(--line); color:var(--muted); padding:9px; border-radius:8px; font:inherit; cursor:pointer}
+  .cancelbtn:hover{background:var(--bg)}
+  .gatenote{font-size:11px; color:#9aa3ac; margin-top:14px}
+
+  header.top{background:var(--navy); color:#fff; padding:14px 0 16px; margin-bottom:18px; border-bottom:3px solid var(--navy2)}
+  .top .wrap{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  .brand{display:flex; align-items:baseline; gap:10px}
+  .brand input{background:transparent; border:none; border-bottom:1px dashed rgba(255,255,255,.35); color:#fff; font:inherit; font-size:18px; font-weight:600; width:auto; min-width:120px; padding:0 2px 2px}
+  .brand input:focus{outline:none; border-bottom-color:#fff}
+  .brand span{font-size:12px; color:#b9c6d6}
+  .toolbtns{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .userchip{font-size:13px; color:#cdd9e6; margin-right:4px}
+  .userchip b{color:#fff; font-weight:600}
+  .doton{display:inline-block; width:8px; height:8px; border-radius:50%; background:#8fd06a; margin-right:5px; vertical-align:0}
+  .toolbtns button{background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.22); padding:7px 12px; border-radius:8px; font:inherit; font-size:13px; cursor:pointer}
+  .toolbtns button:hover{background:rgba(255,255,255,.20)}
+
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:18px}
+  .stat{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:11px 14px}
+  .stat .l{font-size:11px; letter-spacing:.4px; text-transform:uppercase; color:var(--muted)}
+  .stat .v{font-size:20px; font-weight:600; margin-top:2px}
+  .stat .v.small{font-size:15px; font-weight:500}
+
+  .grid2{display:grid; grid-template-columns:300px 1fr; gap:18px; align-items:start}
+  @media(max-width:880px){ .grid2{grid-template-columns:1fr} }
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px}
+  .card h2{font-size:14px; margin:0 0 12px; font-weight:600}
+  .field{margin-bottom:11px}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+  .field input,.field select{width:100%; padding:8px 9px; border:1px solid var(--line); border-radius:8px; font:inherit; background:#fff; color:var(--ink)}
+  .field input:focus,.field select:focus{outline:none; border-color:var(--navy2); box-shadow:0 0 0 3px rgba(32,72,110,.12)}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .saldo-line{font-size:13px; color:var(--muted); margin:2px 0 12px}
+  .saldo-line b{color:var(--ink); font-weight:600}
+  .addbtn{width:100%; background:var(--navy); color:#fff; border:none; padding:10px; border-radius:8px; font:inherit; font-size:14px; font-weight:600; cursor:pointer}
+  .addbtn:hover{background:var(--navy2)}
+  .addbtn:disabled{opacity:.6; cursor:default}
+  .formcancel{width:100%; margin-top:8px; background:none; border:1px solid var(--line); color:var(--muted); padding:8px; border-radius:8px; font:inherit; cursor:pointer}
+  .formcancel:hover{background:var(--bg)}
+
+  .calhead{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; flex-wrap:wrap}
+  .navmonth{display:flex; align-items:center; gap:8px}
+  .navmonth button{width:32px; height:32px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; font-size:16px; line-height:1; color:var(--ink)}
+  .navmonth button:hover{background:var(--bg)}
+  .navmonth .mlabel{font-size:15px; font-weight:600; min-width:150px; text-align:center; text-transform:capitalize}
+  .legend{display:flex; gap:14px; font-size:12px; color:var(--muted); flex-wrap:wrap}
+  .legend i{display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:-1px; margin-right:4px}
+
+  .calscroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius)}
+  table.cal{border-collapse:collapse; width:100%; table-layout:fixed}
+  table.cal th,table.cal td{border-bottom:1px solid #eef0f2; text-align:center}
+  table.cal thead th{position:sticky; top:0; background:var(--surface); font-weight:500; color:var(--muted); font-size:11px; padding:7px 0; height:44px; border-bottom:1px solid var(--line)}
+  table.cal thead th .dow{display:block; font-size:10px; opacity:.7}
+  table.cal th.rowh,table.cal td.rowh{position:sticky; left:0; z-index:2; background:var(--surface); text-align:left; padding:6px 10px; width:132px; min-width:132px; border-right:1px solid var(--line); font-weight:500}
+  table.cal thead th.corner{z-index:3; left:0}
+  td.rowh .cnt{color:var(--muted); font-weight:400; font-size:12px}
+  table.cal tbody td{height:34px; font-size:12px; font-weight:600; cursor:pointer; width:32px; min-width:32px}
+  td.wend{background:#fafafa} th.wend{background:#f7f8fa}
+  th.today{color:#fff; background:var(--navy); border-radius:6px}
+  td.disp{background:var(--disp-bg); color:var(--disp-tx)}
+  td.occ{color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.55); font-weight:600}
+
+  .list h2{display:flex; align-items:center; justify-content:space-between}
+  .list .toggle{font-size:12px; color:var(--navy2); cursor:pointer; font-weight:500}
+  .restable{overflow-x:auto}
+  table.res{width:100%; border-collapse:collapse; font-size:13px; min-width:640px}
+  table.res th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--line); font-weight:500}
+  table.res td{padding:7px 8px; border-bottom:1px solid #f0f1f3}
+  table.res td.num{text-align:right}
+  .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:0}
+  .dot.cli{background:var(--cli)} .dot.boo{background:var(--boo)} .dot.age{background:var(--age)}
+  .iconbtn{border:none; background:none; cursor:pointer; font-size:14px; padding:2px 6px; border-radius:6px; color:#b9c0c9}
+  .iconbtn.edit:hover{color:var(--navy2); background:#eef3f9}
+  .iconbtn.del:hover{color:var(--age); background:#fdeceb}
+  .saldo-pos{color:var(--age); font-weight:600}
+  .saldo-zero{color:var(--disp-tx)}
+  .empty{color:var(--muted); font-size:13px; padding:18px 4px; text-align:center}
+
+  .overlay{position:fixed; inset:0; background:rgba(20,32,48,.42); display:none; align-items:center; justify-content:center; padding:16px; z-index:60}
+  .overlay.on{display:flex}
+  .modal{background:#fff; border-radius:12px; max-width:440px; width:100%; padding:18px 20px; max-height:82vh; overflow:auto}
+  .modal h3{margin:0 0 4px; font-size:15px}
+  .modal .sub{color:var(--muted); font-size:12px; margin-bottom:12px}
+  .modal .item{border:1px solid var(--line); border-radius:8px; padding:9px 11px; margin-bottom:8px; display:flex; justify-content:space-between; gap:10px}
+  .modal .close{float:right; border:none; background:none; font-size:20px; cursor:pointer; color:var(--muted); line-height:1}
+</style>
+
+<div class="gate on" id="gate">
+  <div class="gatebox">
+    <div id="gateList">
+      <h2>¿Quién ingresa?</h2>
+      <p>Selecciona tu cuenta para comenzar.</p>
+      <div class="userlist" id="userlist"></div>
+      <div class="gatenote" id="gateNote"></div>
+    </div>
+    <div id="gatePass" style="display:none">
+      <h2 id="gpName"></h2>
+      <p>Ingresa tu contraseña.</p>
+      <input type="password" id="gpInput" placeholder="Contraseña">
+      <div class="gerr" id="gpErr">Correo o contraseña incorrectos.</div>
+      <button class="addbtn" id="gpEnter" style="margin-bottom:8px">Ingresar</button>
+      <button class="cancelbtn" id="gpBack">Volver</button>
+    </div>
+  </div>
+</div>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <input id="hotelName" value="Hotel" aria-label="Nombre del hotel">
+      <span>· Panel de reservas</span>
+    </div>
+    <div class="toolbtns">
+      <span class="userchip" id="userChip"></span>
+      <button id="btnUser">Cambiar usuario</button>
+      <button id="btnExport" title="Descarga una copia de seguridad de las reservas">Exportar copia</button>
+      <button id="btnImport" title="Restaurar reservas desde una copia">Importar</button>
+      <input type="file" id="fileImport" accept="application/json" style="display:none">
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stats" id="stats"></div>
+  <div class="grid2">
+    <div class="card">
+      <h2 id="formTitle">Nueva reserva</h2>
+      <div class="field"><label for="f-tipo">Tipo de habitación</label><select id="f-tipo"></select></div>
+      <div class="field"><label for="f-huesped">Huésped</label><input id="f-huesped" placeholder="Nombre o agencia"></div>
+      <div class="field"><label for="f-telefono">Teléfono / contacto</label><input id="f-telefono" placeholder="Ej. 913 723 130"></div>
+      <div class="field"><label for="f-origen">Origen</label><select id="f-origen"><option value="cli">Cliente</option><option value="boo">Booking</option><option value="age">Agencia</option></select></div>
+      <div class="row2">
+        <div class="field"><label for="f-entrada">Entrada</label><input type="date" id="f-entrada"></div>
+        <div class="field"><label for="f-salida">Salida</label><input type="date" id="f-salida"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="f-moneda">Moneda</label><select id="f-moneda"><option value="PEN">S/ Soles</option><option value="USD">US$ Dólares</option></select></div>
+        <div class="field"><label for="f-monto">Monto total</label><input type="number" id="f-monto" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="field"><label for="f-adelanto">Adelanto recibido</label><input type="number" id="f-adelanto" min="0" step="0.01" placeholder="0.00" value="0"></div>
+      <div class="saldo-line">Saldo por cobrar: <b id="f-saldo">—</b></div>
+      <button class="addbtn" id="f-add">Registrar reserva</button>
+      <button class="formcancel" id="f-cancel" style="display:none">Cancelar edición</button>
+    </div>
+
+    <div>
+      <div class="calhead">
+        <div class="navmonth">
+          <button id="prevM" aria-label="Mes anterior">‹</button>
+          <div class="mlabel" id="mlabel"></div>
+          <button id="nextM" aria-label="Mes siguiente">›</button>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--disp-bg);border:1px solid #cfe3ba"></i>Disponible</span>
+          <span><i style="background:var(--cli)"></i>Cliente</span>
+          <span><i style="background:var(--boo)"></i>Booking</span>
+          <span><i style="background:var(--age)"></i>Agencia</span>
+        </div>
+      </div>
+      <div class="calscroll"><table class="cal"><thead id="calHead"></thead><tbody id="calBody"></tbody></table></div>
+      <p style="font-size:12px;color:var(--muted);margin:10px 2px 0">El número es cuántas habitaciones quedan libres ese día. Si se juntan varios orígenes, la celda se divide en sus colores. Haz clic para ver el detalle.</p>
+
+      <div class="card list" style="margin-top:18px">
+        <h2>Reservas <span class="toggle" id="scopeToggle"></span></h2>
+        <div class="restable" id="resTableWrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ====== Conexión a tu base de Supabase ======
+  var SB_URL='https://aatipguzyopawgwnwndk.supabase.co';
+  var SB_KEY='sb_publishable_SNHQ7WoEjeigBzUGzuRz6Q_MYqe5pFt';
+  // Clave extra para EDITAR o ELIMINAR reservas (cámbiala aquí por la que quieras):
+  var CLAVE_EDICION='admin';
+  // Usuarios (botones). Los correos son solo identificadores; las contraseñas se crean en Supabase.
+  var USERS=[
+    {name:'Administración', email:'administracion@hotel.com'},
+    {name:'Contabilidad',   email:'contabilidad@hotel.com'},
+    {name:'Gerencia',       email:'gerencia@hotel.com'},
+    {name:'Recepción',      email:'recepcion@hotel.com'}
+  ];
+
+  var HABS=[
+    {id:'simple',      nom:'Simple',            total:3, precio:120},
+    {id:'matrimonial', nom:'Matrimonial',       total:8, precio:160},
+    {id:'doble',       nom:'Doble',             total:4, precio:180},
+    {id:'triple',      nom:'Triple',            total:3, precio:240},
+    {id:'familiar',    nom:'Familiar',          total:4, precio:220},
+    {id:'suite_matri', nom:'Suite Matrimonial', total:3, precio:190},
+    {id:'suite_ejec',  nom:'Suite Ejecutiva',   total:1, precio:200},
+    {id:'suite_imper', nom:'Suite Imperial',    total:1, precio:240}
+  ];
+  var HAB_BY={}; HABS.forEach(function(h){ HAB_BY[h.id]=h; });
+  var ORIG={cli:'Cliente', boo:'Booking', age:'Agencia'};
+  var COL={cli:'#e0891f', boo:'#2f7fd6', age:'#d24743'};
+  var ORDER=['age','boo','cli'];
+  var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var DOW=['D','L','M','M','J','V','S'];
+
+  var sb=null;
+  var state={ reservas:[], y:0, m:0, scope:'mes' };
+  var currentUser=null, pendingUser=null, editingId=null;
+  var today=new Date();
+
+  function pad(n){ return (n<10?'0':'')+n; }
+  function iso(y,m,d){ return y+'-'+pad(m+1)+'-'+pad(d); }
+  function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
+  function nights(a,b){ var x=new Date(a+'T00:00'),y=new Date(b+'T00:00'); return Math.max(0,Math.round((y-x)/86400000)); }
+  function covers(r,d){ return r.entrada<=d && d<r.salida; }
+  function fmt(n,mon){ var s=mon==='USD'?'US$ ':'S/ '; return s+Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fechaCorta(ds){ var p=ds.split('-'); return p[2]+'/'+p[1]; }
+  function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function distinctOrigins(res){ return ORDER.filter(function(o){ return res.some(function(r){return r.origen===o;}); }); }
+  function buildBg(list){ if(list.length===1) return COL[list[0]]; var n=list.length,s=[]; for(var i=0;i<n;i++){ s.push(COL[list[i]]+' '+(i*100/n).toFixed(2)+'% '+((i+1)*100/n).toFixed(2)+'%'); } return 'linear-gradient(90deg,'+s.join(',')+')'; }
+
+  // ====== capa de datos (Supabase) ======
+  function normalize(row){ return { id:row.id, tipo:row.tipo, huesped:row.huesped, telefono:row.telefono, origen:row.origen, entrada:row.entrada, salida:row.salida, moneda:row.moneda||'PEN', monto:+row.monto||0, adelanto:+row.adelanto||0, createdBy:row.created_by }; }
+  function payloadDe(f){ return { tipo:f.tipo, huesped:f.huesped, telefono:f.telefono, origen:f.origen, entrada:f.entrada, salida:f.salida, moneda:f.moneda, monto:f.monto, adelanto:f.adelanto }; }
+
+  async function loadReservas(){
+    document.getElementById('resTableWrap').innerHTML='<div class="empty">Cargando reservas…</div>';
+    var res=await sb.from('reservas').select('*').order('entrada',{ascending:true});
+    if(res.error){ alert('No se pudieron cargar las reservas: '+res.error.message); state.reservas=[]; }
+    else{ state.reservas=(res.data||[]).map(normalize); }
+    renderAll();
+  }
+  async function addRes(f){
+    var p=payloadDe(f); p.created_by=currentUser;
+    var res=await sb.from('reservas').insert(p).select();
+    if(res.error){ alert('No se pudo guardar: '+res.error.message); return false; }
+    if(res.data&&res.data[0]) state.reservas.push(normalize(res.data[0]));
+    return true;
+  }
+  async function updateRes(id,f){
+    var res=await sb.from('reservas').update(payloadDe(f)).eq('id',id).select();
+    if(res.error){ alert('No se pudo actualizar: '+res.error.message); return false; }
+    if(res.data&&res.data[0]){ var i=state.reservas.map(function(x){return x.id;}).indexOf(id); if(i>=0) state.reservas[i]=normalize(res.data[0]); }
+    return true;
+  }
+  async function delRes(id){
+    var res=await sb.from('reservas').delete().eq('id',id);
+    if(res.error){ alert('No se pudo eliminar: '+res.error.message); return; }
+    state.reservas=state.reservas.filter(function(r){return r.id!==id;});
+    if(editingId===id) cancelEdit();
+    renderAll();
+  }
+
+  // ====== calendario ======
+  function renderCal(){
+    var y=state.y,m=state.m,nd=daysInMonth(y,m);
+    var head='<tr><th class="rowh corner">Habitación</th>';
+    for(var d=1;d<=nd;d++){
+      var dow=new Date(y,m,d).getDay(), wend=(dow===0||dow===6);
+      var isToday=(y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate());
+      head+='<th class="'+(isToday?'today':(wend?'wend':''))+'">'+d+'<span class="dow">'+DOW[dow]+'</span></th>';
+    }
+    head+='</tr>'; document.getElementById('calHead').innerHTML=head;
+    var body='';
+    HABS.forEach(function(h){
+      body+='<tr><td class="rowh">'+h.nom+' <span class="cnt">('+h.total+')</span></td>';
+      for(var d=1;d<=nd;d++){
+        var ds=iso(y,m,d);
+        var res=state.reservas.filter(function(r){return r.tipo===h.id&&covers(r,ds);});
+        var libres=h.total-res.length;
+        var dow=new Date(y,m,d).getDay(), wend=(dow===0||dow===6);
+        if(res.length===0){ body+='<td class="disp'+(wend?' wend':'')+'" data-day="'+ds+'" title="'+h.nom+' · '+d+'/'+(m+1)+' · '+libres+' libres">'+libres+'</td>'; }
+        else{ body+='<td class="occ" style="background:'+buildBg(distinctOrigins(res))+'" data-day="'+ds+'" title="'+h.nom+' · '+d+'/'+(m+1)+' · '+libres+' libres">'+libres+'</td>'; }
+      }
+      body+='</tr>';
+    });
+    document.getElementById('calBody').innerHTML=body;
+    document.getElementById('mlabel').textContent=MESES[m]+' '+y;
+    Array.prototype.forEach.call(document.querySelectorAll('#calBody td[data-day]'),function(td){ td.addEventListener('click',function(){ openDay(td.getAttribute('data-day')); }); });
+  }
+
+  function renderStats(){
+    var y=state.y,m=state.m,nd=daysInMonth(y,m),pref=y+'-'+pad(m+1);
+    var delMes=state.reservas.filter(function(r){ return (r.entrada||'').slice(0,7)===pref; });
+    var mPEN=0,aPEN=0,mUSD=0,aUSD=0;
+    delMes.forEach(function(r){ if(r.moneda==='USD'){mUSD+=+r.monto||0;aUSD+=+r.adelanto||0;}else{mPEN+=+r.monto||0;aPEN+=+r.adelanto||0;} });
+    var tot=0; HABS.forEach(function(h){tot+=h.total;});
+    var oc=0; for(var d=1;d<=nd;d++){ var ds=iso(y,m,d); state.reservas.forEach(function(r){ if(covers(r,ds)) oc++; }); }
+    var pct=Math.round((oc/(tot*nd))*100);
+    var sPEN=mPEN-aPEN,sUSD=mUSD-aUSD;
+    var cards=[
+      {l:'Reservas del mes',v:delMes.length},
+      {l:'Ocupación media',v:pct+'%'},
+      {l:'Monto del mes',v:(mUSD>0?fmt(mPEN,'PEN')+'  ·  '+fmt(mUSD,'USD'):fmt(mPEN,'PEN')),s:true},
+      {l:'Saldo por cobrar',v:(sUSD>0?fmt(sPEN,'PEN')+'  ·  '+fmt(sUSD,'USD'):fmt(sPEN,'PEN')),s:true}
+    ];
+    document.getElementById('stats').innerHTML=cards.map(function(c){ return '<div class="stat"><div class="l">'+c.l+'</div><div class="v'+(c.s?' small':'')+'">'+c.v+'</div></div>'; }).join('');
+  }
+
+  function renderList(){
+    var y=state.y,m=state.m,pref=y+'-'+pad(m+1);
+    var rows=state.reservas.slice().sort(function(a,b){ return a.entrada<b.entrada?-1:(a.entrada>b.entrada?1:0); });
+    if(state.scope==='mes'){ rows=rows.filter(function(r){ return (r.entrada||'').slice(0,7)===pref; }); }
+    document.getElementById('scopeToggle').textContent=state.scope==='mes'?'Ver todas':'Ver solo este mes';
+    if(!rows.length){ document.getElementById('resTableWrap').innerHTML='<div class="empty">Sin reservas '+(state.scope==='mes'?'este mes':'registradas')+'. Registra una en el panel de la izquierda.</div>'; return; }
+    var html='<table class="res"><thead><tr><th>Huésped</th><th>Teléfono</th><th>Habitación</th><th>Origen</th><th>Estadía</th><th class="num">Monto</th><th class="num">Adelanto</th><th class="num">Saldo</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var sal=(+r.monto||0)-(+r.adelanto||0), salCls=sal<=0.001?'saldo-zero':'saldo-pos', nn=nights(r.entrada,r.salida);
+      html+='<tr>'+
+        '<td>'+escapeHtml(r.huesped||'—')+'</td>'+
+        '<td>'+escapeHtml(r.telefono||'—')+'</td>'+
+        '<td>'+HAB_BY[r.tipo].nom+'</td>'+
+        '<td><span class="dot '+r.origen+'"></span>'+ORIG[r.origen]+'</td>'+
+        '<td>'+fechaCorta(r.entrada)+' → '+fechaCorta(r.salida)+' <span style="color:var(--muted)">('+nn+'n)</span></td>'+
+        '<td class="num">'+fmt(r.monto,r.moneda)+'</td>'+
+        '<td class="num">'+fmt(r.adelanto,r.moneda)+'</td>'+
+        '<td class="num '+salCls+'">'+fmt(sal,r.moneda)+'</td>'+
+        '<td class="num" style="white-space:nowrap"><button class="iconbtn edit" data-id="'+r.id+'" title="Editar (requiere clave)">✎</button><button class="iconbtn del" data-id="'+r.id+'" title="Eliminar (requiere clave)">✕</button></td>'+
+      '</tr>';
+    });
+    html+='</tbody></table>';
+    document.getElementById('resTableWrap').innerHTML=html;
+    Array.prototype.forEach.call(document.querySelectorAll('.iconbtn.del'),function(b){ b.addEventListener('click',function(){ var id=b.getAttribute('data-id'); askClave(function(){ if(confirm('¿Eliminar esta reserva?')) delRes(id); }); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('.iconbtn.edit'),function(b){ b.addEventListener('click',function(){ var id=b.getAttribute('data-id'); askClave(function(){ startEdit(id); }); }); });
+  }
+
+  function renderAll(){ renderStats(); renderCal(); renderList(); }
+
+  // ====== modal ======
+  function openModal(html){ document.getElementById('modal').innerHTML=html; document.getElementById('overlay').classList.add('on'); }
+  function closeModal(){ document.getElementById('overlay').classList.remove('on'); }
+  document.getElementById('overlay').addEventListener('click',function(e){ if(e.target.id==='overlay') closeModal(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeModal(); });
+
+  function openDay(ds){
+    var res=state.reservas.filter(function(r){ return covers(r,ds); }).sort(function(a,b){ return a.tipo<b.tipo?-1:1; });
+    var p=ds.split('-');
+    var libres=HABS.map(function(h){ var o=state.reservas.filter(function(r){return r.tipo===h.id&&covers(r,ds);}).length; return h.nom+': '+(h.total-o)+'/'+h.total; }).join(' · ');
+    var body='<button class="close" id="mClose">✕</button><h3>'+p[2]+' de '+MESES[+p[1]-1]+' '+p[0]+'</h3><div class="sub">'+libres+'</div>';
+    if(!res.length){ body+='<div class="empty">Sin reservas este día.</div>'; }
+    else{ res.forEach(function(r){ var sal=(+r.monto||0)-(+r.adelanto||0);
+      body+='<div class="item"><div>'+
+        '<div><span class="dot '+r.origen+'"></span><b>'+escapeHtml(r.huesped||'Sin nombre')+'</b></div>'+
+        '<div style="color:var(--muted);font-size:12px">'+HAB_BY[r.tipo].nom+' · '+ORIG[r.origen]+' · '+fechaCorta(r.entrada)+'→'+fechaCorta(r.salida)+'</div>'+
+        (r.telefono?'<div style="color:var(--muted);font-size:12px">☎ '+escapeHtml(r.telefono)+'</div>':'')+
+        (r.createdBy?'<div style="color:var(--muted);font-size:11px">Registró: '+escapeHtml(r.createdBy)+'</div>':'')+
+        '</div><div style="text-align:right;font-size:12px"><div>'+fmt(r.monto,r.moneda)+'</div><div class="'+(sal<=0.001?'saldo-zero':'saldo-pos')+'">saldo '+fmt(sal,r.moneda)+'</div></div></div>';
+    }); }
+    openModal(body); document.getElementById('mClose').addEventListener('click',closeModal);
+  }
+
+  function askClave(onOk){
+    openModal('<button class="close" id="mClose">✕</button><h3>Clave de edición</h3><div class="sub">Ingresa la clave para editar o eliminar la reserva.</div><input type="password" id="pwInput" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;margin-bottom:10px"><button class="addbtn" id="pwOk">Continuar</button>');
+    document.getElementById('mClose').addEventListener('click',closeModal);
+    var inp=document.getElementById('pwInput'); inp.focus();
+    function go(){ if(inp.value===CLAVE_EDICION){ closeModal(); onOk(); } else { inp.value=''; inp.style.borderColor='var(--age)'; inp.placeholder='Clave incorrecta'; inp.focus(); } }
+    document.getElementById('pwOk').addEventListener('click',go);
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter') go(); });
+  }
+
+  // ====== formulario ======
+  function prefillMonto(){
+    var h=HAB_BY[document.getElementById('f-tipo').value];
+    var e=document.getElementById('f-entrada').value,s=document.getElementById('f-salida').value;
+    if(h&&e&&s){ var n=nights(e,s); if(n>0 && !document.getElementById('f-monto').dataset.touched){ document.getElementById('f-monto').value=(h.precio*n).toFixed(2); } }
+    updateSaldo();
+  }
+  function updateSaldo(){ var m=+document.getElementById('f-monto').value||0,a=+document.getElementById('f-adelanto').value||0,mon=document.getElementById('f-moneda').value; document.getElementById('f-saldo').textContent=fmt(m-a,mon); }
+  function readForm(){ return { tipo:document.getElementById('f-tipo').value, huesped:document.getElementById('f-huesped').value.trim(), telefono:document.getElementById('f-telefono').value.trim(), origen:document.getElementById('f-origen').value, entrada:document.getElementById('f-entrada').value, salida:document.getElementById('f-salida').value, moneda:document.getElementById('f-moneda').value, monto:+document.getElementById('f-monto').value||0, adelanto:+document.getElementById('f-adelanto').value||0 }; }
+  function choqueEnRango(tipo,entrada,salida,exceptId){
+    var h=HAB_BY[tipo],cur=new Date(entrada+'T00:00'),end=new Date(salida+'T00:00');
+    while(cur<end){ var ds=iso(cur.getFullYear(),cur.getMonth(),cur.getDate());
+      var oc=state.reservas.filter(function(r){ return r.tipo===tipo && r.id!==exceptId && covers(r,ds); }).length;
+      if(oc>=h.total) return ds; cur.setDate(cur.getDate()+1);
+    } return null;
+  }
+  async function submitForm(){
+    var f=readForm();
+    if(!f.entrada||!f.salida){ alert('Indica las fechas de entrada y salida.'); return; }
+    if(nights(f.entrada,f.salida)<1){ alert('La salida debe ser posterior a la entrada.'); return; }
+    var ch=choqueEnRango(f.tipo,f.entrada,f.salida,editingId);
+    if(ch){ alert('No hay '+HAB_BY[f.tipo].nom+' disponible el '+fechaCorta(ch)+' (todas ocupadas).'); return; }
+    var btn=document.getElementById('f-add'); btn.disabled=true; var prev=btn.textContent; btn.textContent='Guardando…';
+    var ok;
+    if(editingId){ ok=await updateRes(editingId,f); if(ok) cancelEdit(); }
+    else{ ok=await addRes(f); if(ok){ document.getElementById('f-huesped').value=''; document.getElementById('f-telefono').value=''; document.getElementById('f-monto').value=''; document.getElementById('f-monto').dataset.touched=''; document.getElementById('f-adelanto').value='0'; updateSaldo(); } }
+    btn.disabled=false; btn.textContent=editingId?'Guardar cambios':prev;
+    if(ok){ state.y=+f.entrada.slice(0,4); state.m=+f.entrada.slice(5,7)-1; renderAll(); }
+  }
+  function startEdit(id){
+    var r=state.reservas.filter(function(x){return x.id===id;})[0]; if(!r) return;
+    editingId=id;
+    document.getElementById('f-tipo').value=r.tipo;
+    document.getElementById('f-huesped').value=r.huesped||'';
+    document.getElementById('f-telefono').value=r.telefono||'';
+    document.getElementById('f-origen').value=r.origen;
+    document.getElementById('f-entrada').value=r.entrada;
+    document.getElementById('f-salida').value=r.salida;
+    document.getElementById('f-moneda').value=r.moneda||'PEN';
+    document.getElementById('f-monto').value=r.monto; document.getElementById('f-monto').dataset.touched='1';
+    document.getElementById('f-adelanto').value=r.adelanto; updateSaldo();
+    document.getElementById('formTitle').textContent='Editar reserva';
+    document.getElementById('f-add').textContent='Guardar cambios';
+    document.getElementById('f-cancel').style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function cancelEdit(){
+    editingId=null;
+    document.getElementById('formTitle').textContent='Nueva reserva';
+    document.getElementById('f-add').textContent='Registrar reserva';
+    document.getElementById('f-cancel').style.display='none';
+    document.getElementById('f-huesped').value=''; document.getElementById('f-telefono').value='';
+    document.getElementById('f-monto').value=''; document.getElementById('f-monto').dataset.touched='';
+    document.getElementById('f-adelanto').value='0'; updateSaldo();
+  }
+
+  // ====== login ======
+  function showGateList(){ document.getElementById('gateList').style.display='block'; document.getElementById('gatePass').style.display='none'; }
+  function showGatePass(u){ pendingUser=u; document.getElementById('gpName').textContent=u.name; document.getElementById('gpErr').style.display='none'; var i=document.getElementById('gpInput'); i.value=''; document.getElementById('gateList').style.display='none'; document.getElementById('gatePass').style.display='block'; i.focus(); }
+  function renderUsers(){
+    var ul=document.getElementById('userlist'); ul.innerHTML='';
+    USERS.forEach(function(u){ var b=document.createElement('button'); b.className='upick'; b.textContent=u.name; b.addEventListener('click',function(){ showGatePass(u); }); ul.appendChild(b); });
+  }
+  async function tryEnter(){
+    if(!pendingUser||!sb) return;
+    var btn=document.getElementById('gpEnter'); btn.disabled=true; btn.textContent='Ingresando…';
+    var pass=document.getElementById('gpInput').value;
+    var res=await sb.auth.signInWithPassword({ email:pendingUser.email, password:pass });
+    btn.disabled=false; btn.textContent='Ingresar';
+    if(res.error){ var ge=document.getElementById('gpErr'); ge.style.display='block'; ge.textContent=res.error.message||'No se pudo iniciar sesión.'; document.getElementById('gpInput').focus(); return; }
+    currentUser=pendingUser.name;
+    document.getElementById('userChip').innerHTML='<span class="doton"></span>Usuario: <b>'+escapeHtml(currentUser)+'</b>';
+    document.getElementById('gate').classList.remove('on');
+    await loadReservas();
+  }
+
+  // ====== export / import ======
+  function exportar(){
+    var blob=new Blob([JSON.stringify(state.reservas,null,2)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='reservas_'+iso(today.getFullYear(),today.getMonth(),today.getDate())+'.json'; a.click();
+  }
+  function importar(file){
+    var rd=new FileReader();
+    rd.onload=async function(){
+      try{ var data=JSON.parse(rd.result); if(!Array.isArray(data)) throw 0;
+        if(!confirm('Se agregarán '+data.length+' reservas del archivo a la base compartida. ¿Continuar?')) return;
+        var payload=data.map(function(r){ return { tipo:r.tipo, huesped:r.huesped, telefono:r.telefono, origen:r.origen, entrada:r.entrada, salida:r.salida, moneda:r.moneda||'PEN', monto:+r.monto||0, adelanto:+r.adelanto||0, created_by:r.createdBy||currentUser }; });
+        var res=await sb.from('reservas').insert(payload);
+        if(res.error){ alert('No se pudo importar: '+res.error.message); return; }
+        await loadReservas(); alert('Reservas importadas.');
+      }catch(e){ alert('El archivo no es una copia válida.'); }
+    };
+    rd.readAsText(file);
+  }
+
+  // ====== init ======
+  function init(){
+    var st=document.getElementById('f-tipo');
+    HABS.forEach(function(h){ var o=document.createElement('option'); o.value=h.id; o.textContent=h.nom+' — S/ '+h.precio; st.appendChild(o); });
+    var t=iso(today.getFullYear(),today.getMonth(),today.getDate());
+    var tm=new Date(today.getTime()+86400000);
+    document.getElementById('f-entrada').value=t;
+    document.getElementById('f-salida').value=iso(tm.getFullYear(),tm.getMonth(),tm.getDate());
+    state.y=today.getFullYear(); state.m=today.getMonth();
+
+    if(!window.supabase || !window.supabase.createClient){
+      document.getElementById('gateNote').textContent='No se pudo cargar la conexión. Revisa tu internet y recarga la página.';
+    }else{
+      sb=window.supabase.createClient(SB_URL, SB_KEY, { auth:{ persistSession:false, autoRefreshToken:true } });
+    }
+
+    renderUsers();
+    document.getElementById('gpEnter').addEventListener('click',tryEnter);
+    document.getElementById('gpInput').addEventListener('keydown',function(e){ if(e.key==='Enter') tryEnter(); });
+    document.getElementById('gpBack').addEventListener('click',showGateList);
+
+    document.getElementById('f-add').addEventListener('click',submitForm);
+    document.getElementById('f-cancel').addEventListener('click',cancelEdit);
+    ['f-tipo','f-entrada','f-salida'].forEach(function(id){ document.getElementById(id).addEventListener('change',prefillMonto); });
+    document.getElementById('f-monto').addEventListener('input',function(){ this.dataset.touched='1'; updateSaldo(); });
+    document.getElementById('f-adelanto').addEventListener('input',updateSaldo);
+    document.getElementById('f-moneda').addEventListener('change',updateSaldo);
+    document.getElementById('prevM').addEventListener('click',function(){ state.m--; if(state.m<0){state.m=11;state.y--;} renderAll(); });
+    document.getElementById('nextM').addEventListener('click',function(){ state.m++; if(state.m>11){state.m=0;state.y++;} renderAll(); });
+    document.getElementById('scopeToggle').addEventListener('click',function(){ state.scope=(state.scope==='mes'?'todas':'mes'); renderList(); });
+    document.getElementById('btnExport').addEventListener('click',exportar);
+    document.getElementById('btnImport').addEventListener('click',function(){ document.getElementById('fileImport').click(); });
+    document.getElementById('fileImport').addEventListener('change',function(){ if(this.files[0]) importar(this.files[0]); this.value=''; });
+    document.getElementById('btnUser').addEventListener('click',async function(){ if(sb){ try{ await sb.auth.signOut(); }catch(e){} } currentUser=null; state.reservas=[]; document.getElementById('userChip').innerHTML=''; showGateList(); document.getElementById('gate').classList.add('on'); });
+    try{ var hn=localStorage.getItem('hotel_nombre'); if(hn) document.getElementById('hotelName').value=hn; }catch(e){}
+    document.getElementById('hotelName').addEventListener('change',function(){ try{ localStorage.setItem('hotel_nombre',this.value); }catch(e){} });
+
+    prefillMonto();
+  }
+  init();
+})();
+</script>
